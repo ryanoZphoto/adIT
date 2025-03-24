@@ -24,45 +24,59 @@ def show_debug_info():
 
 # Now define the main app logic in a function
 def main():
-    # First show debug info
-    show_debug_info()
-    
-    # Try to install the package in development mode if it's not installed
     try:
         import ad_service
         st.write("ad_service package is already imported")
         
-        # Now run the actual application
+        # Import all contents from the main module
+        # We need to prevent the main module from calling set_page_config again
+        import ad_service.gui.main as main_module
+        
+        # Delete the set_page_config function to prevent it from being called again
+        if hasattr(main_module, 'st') and hasattr(main_module.st, 'set_page_config'):
+            # Create a dummy function that does nothing
+            def dummy_set_page_config(*args, **kwargs):
+                pass
+            
+            # Replace the real function with our dummy one
+            original_set_page_config = main_module.st.set_page_config
+            main_module.st.set_page_config = dummy_set_page_config
+            
+        # Run the core logic from main module
+        # Exposing all the variables and functions from main
+        for name in dir(main_module):
+            if not name.startswith('__'):
+                globals()[name] = getattr(main_module, name)
+                
+        # Run any initialization functions from main if they exist
+        if hasattr(main_module, 'initialize_app'):
+            main_module.initialize_app()
+            
+        # Return control to the main module's execution flow
+        if hasattr(main_module, 'run_app'):
+            main_module.run_app()
+            
+    except ImportError as e:
+        st.error(f"Error importing modules: {e}")
+        show_debug_info()
         try:
-            # Clear previous output before running main app
-            container = st.empty()
-            with container:
-                # Import and run the main functionality
-                try:
-                    # First try ad_manager_ui (safer option)
-                    from ad_service.gui.ad_manager_ui import render_ad_manager_ui
-                    render_ad_manager_ui()
-                except ImportError as e:
-                    st.error(f"Error importing ad_manager_ui: {e}")
+            # Try to run the main.py directly as fallback
+            from ad_service.gui.main import *
+        except ImportError as e2:
+            st.error(f"Error importing main module: {e2}")
+            try:
+                # Final fallback to just the Ad Manager UI
+                from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+                render_ad_manager_ui()
+            except ImportError as e3:
+                st.error(f"Error importing ad_manager_ui: {e3}")
+                st.error("Directory structure:")
+                if os.path.exists('ad_service'):
+                    st.write(f"ad_service contents: {os.listdir('ad_service')}")
                     if os.path.exists('ad_service/gui'):
                         st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
-        except ImportError as e:
-            st.error(f"Error importing modules: {e}")
-    except ImportError:
-        st.write("ad_service package not found, importing directly")
-        try:
-            # Try to run the ad manager UI directly
-            from ad_service.gui.ad_manager_ui import render_ad_manager_ui
-            render_ad_manager_ui()
-        except ImportError as e:
-            st.error(f"Error importing ad_service: {e}")
-            st.error("Directory structure:")
-            if os.path.exists('ad_service'):
-                st.write(f"ad_service contents: {os.listdir('ad_service')}")
-                if os.path.exists('ad_service/gui'):
-                    st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
-            else:
-                st.error("ad_service directory not found!")
+                else:
+                    st.error("ad_service directory not found!")
 
 # Run the main app
 if __name__ == "__main__":
