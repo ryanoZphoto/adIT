@@ -3,6 +3,7 @@ import os
 import sys
 import httpx
 from openai import OpenAI
+import time
 
 # Add the parent directory to the Python path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -93,14 +94,34 @@ def render_chat_interface():
                 
                 # Method 2: Use ConfigDrivenAdManager 
                 try:
-                    relevant_ad = config_ad_manager.get_relevant_ad(prompt)
+                    # Create simple context dictionary
+                    context = {
+                        'conversation_id': 'chat_ui',
+                        'timestamp': time.time()
+                    }
+                    
+                    # Use the proper method signature with conversation history
+                    conversation_history = [{"role": msg["role"], "content": msg["content"]} 
+                                           for msg in st.session_state.messages]
+                    
+                    relevant_ad = config_ad_manager.get_relevant_ad(
+                        prompt,
+                        context=context,
+                        conversation_history=conversation_history
+                    )
+                    
                     if relevant_ad:
                         with st.sidebar:
                             st.subheader("Suggested Products (ConfigDriven)")
                             with st.container():
                                 st.markdown(f"**{relevant_ad['title']}**")
                                 st.markdown(f"{relevant_ad['description']}")
-                                st.markdown(f"[{relevant_ad.get('cta', 'Learn More')}]({relevant_ad.get('target_url', '#')})")
+                                
+                                # Handle different field names between ad systems
+                                cta = relevant_ad.get('cta', relevant_ad.get('call_to_action', 'Learn More'))
+                                target_url = relevant_ad.get('target_url', relevant_ad.get('url', '#'))
+                                
+                                st.markdown(f"[{cta}]({target_url})")
                                 if 'image_url' in relevant_ad:
                                     st.image(relevant_ad['image_url'], width=200)
                                 st.markdown("---")
