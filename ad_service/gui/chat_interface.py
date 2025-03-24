@@ -12,6 +12,7 @@ if parent_dir not in sys.path:
 # Import ad matching components
 from ad_service.ad_matching.query_analyzer import QueryAnalyzer
 from ad_service.ad_matching.ad_matcher import AdMatcher
+from ad_service.ad_delivery.config_driven_ad_manager import ConfigDrivenAdManager
 
 # The page config has been moved to the main streamlit_app.py file
 # to avoid multiple st.set_page_config() calls
@@ -19,11 +20,13 @@ from ad_service.ad_matching.ad_matcher import AdMatcher
 def render_chat_interface():
     st.title("Ad Service Chat Interface")
     
-    # Initialize ad matcher and query analyzer
+    # Initialize ad matcher, query analyzer and config driven ad manager
     try:
         ad_matcher = AdMatcher()
         query_analyzer = QueryAnalyzer()
+        config_ad_manager = ConfigDrivenAdManager()
         ad_matching_available = True
+        st.sidebar.success("Ad matching system loaded successfully")
     except Exception as e:
         st.sidebar.error(f"Ad matching system not available: {str(e)}")
         ad_matching_available = False
@@ -63,25 +66,46 @@ def render_chat_interface():
         # Check for relevant ads based on user message
         if ad_matching_available:
             try:
-                # Analyze the user's message for potential ad triggers
-                conversation_history = [{"role": msg["role"], "content": msg["content"]} 
-                                       for msg in st.session_state.messages]
+                # Method 1: Use AdMatcher
+                try:
+                    # Analyze the user's message for potential ad triggers
+                    conversation_history = [{"role": msg["role"], "content": msg["content"]} 
+                                           for msg in st.session_state.messages]
+                    
+                    # Match ads based on conversation history
+                    matched_ads = ad_matcher.match_ads(conversation_history)
+                    
+                    # Display matched ads in sidebar if any are found
+                    if matched_ads:
+                        with st.sidebar:
+                            st.subheader("Suggested Products (AdMatcher)")
+                            for ad_result in matched_ads[:2]:  # Limit to top 2 ads
+                                ad = ad_result["ad"]
+                                with st.container():
+                                    st.markdown(f"**{ad['title']}**")
+                                    st.markdown(f"{ad['description']}")
+                                    st.markdown(f"[{ad.get('call_to_action', 'Learn More')}]({ad['url']})")
+                                    if 'image_url' in ad:
+                                        st.image(ad['image_url'], width=200)
+                                    st.markdown("---")
+                except Exception as e:
+                    st.sidebar.error(f"Error with AdMatcher: {str(e)}")
                 
-                # Match ads based on conversation history
-                matched_ads = ad_matcher.match_ads(conversation_history)
-                
-                # Display matched ads in sidebar if any are found
-                if matched_ads:
-                    with st.sidebar:
-                        st.subheader("Suggested Products")
-                        for ad in matched_ads[:2]:  # Limit to top 2 ads
-                            display_ad = ad_matcher.get_ad_for_display(ad)
+                # Method 2: Use ConfigDrivenAdManager 
+                try:
+                    relevant_ad = config_ad_manager.get_relevant_ad(prompt)
+                    if relevant_ad:
+                        with st.sidebar:
+                            st.subheader("Suggested Products (ConfigDriven)")
                             with st.container():
-                                st.markdown(f"**{display_ad['title']}**")
-                                st.markdown(f"{display_ad['description']}")
-                                st.markdown(f"[{display_ad.get('call_to_action', 'Learn More')}]({display_ad['url']})")
-                                st.image(display_ad.get('image_url', 'https://via.placeholder.com/300x200'), width=200)
+                                st.markdown(f"**{relevant_ad['title']}**")
+                                st.markdown(f"{relevant_ad['description']}")
+                                st.markdown(f"[{relevant_ad.get('cta', 'Learn More')}]({relevant_ad.get('target_url', '#')})")
+                                if 'image_url' in relevant_ad:
+                                    st.image(relevant_ad['image_url'], width=200)
                                 st.markdown("---")
+                except Exception as e:
+                    st.sidebar.error(f"Error with ConfigDrivenAdManager: {str(e)}")
             except Exception as e:
                 st.sidebar.error(f"Error matching ads: {str(e)}")
         
