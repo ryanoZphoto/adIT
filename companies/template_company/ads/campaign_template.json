@@ -1,0 +1,71 @@
+{
+    "campaign_id": "template_campaign",
+    "campaign_name": "Example Campaign",
+    "start_date": "",
+    "end_date": "",
+    "budget": {
+        "total_budget": 1000.0,
+        "daily_budget": 50.0,
+        "bid_strategy": "auto_optimize"
+    },
+    "targeting": {
+        "audience": {
+            "interests": ["example_interest"],
+            "demographics": {
+                "age_range": ["18-24", "25-34"],
+                "locations": ["US"]
+            }
+        },
+        "intent_targeting": {
+            "purchase_intent": true,
+            "research_intent": true,
+            "target_intents": ["purchase_intent", "price_check"]
+        },
+        "context_targeting": {
+            "categories": ["category1", "category2"],
+            "keywords": ["keyword1", "keyword2"],
+            "excluded_keywords": [],
+            "excluded_categories": []
+        }
+    },
+    "ads": [
+        {
+            "ad_id": "template_ad_1",
+            "title": "Example Product Ad",
+            "description": "This is an example product advertisement",
+            "cta": "Shop Now",
+            "image_url": "",
+            "target_url": "https://example.com/product",
+            "display_format": "text",
+            "tracking_pixel": "",
+            "match_weights": {
+                "keyword_match": 0.4,
+                "category_match": 0.3,
+                "intent_match": 0.3
+            },
+            "performance_metrics": {
+                "impressions": 0,
+                "clicks": 0,
+                "conversions": 0,
+                "spend": 0.0,
+                "ctr": 0.0,
+                "conversion_rate": 0.0,
+                "cost_per_conversion": 0.0
+            },
+            "active": true
+        }
+    ],
+    "performance_settings": {
+        "optimization_goal": "conversions",
+        "min_relevance_score": 0.3,
+        "frequency_cap": 3
+    },
+    "reporting": {
+        "frequency": "daily",
+        "metrics": ["impressions", "clicks", "conversions", "spend", "roas"],
+        "notification_email": ""
+    },
+    "status": "draft",
+    "created_at": "",
+    "updated_at": ""
+} 

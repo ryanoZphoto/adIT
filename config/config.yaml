@@ -1,0 +1,41 @@
+# Ad Service Configuration
+
+# OpenAI Configuration
+openai:
+  api_key: ${OPENAI_API_KEY}  # Will be loaded from environment variable
+  model: gpt-4-turbo-preview
+  embedding_model: text-embedding-3-small
+
+# Path configurations (all relative to root directory)
+paths:
+  companies: companies
+  data: ad_service/data
+  logs: ad_service/logs
+  metrics_db: ad_service/data/metrics.db
+  charts: ad_service/charts
+  config: config
+
+# Service configuration
+service:
+  host: localhost
+  port: 8501
+  metrics_port: 8503
+  admin_port: 8502
+
+# Performance settings
+performance:
+  min_relevance_score: 0.7
+  max_ads_per_query: 3
+  cache_ttl: 3600  # 1 hour in seconds
+  embedding_cache_size: 1000
+  query_timeout: 5.0  # seconds
+
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: ad_service/logs/ad_service.log
+
+metrics:
+  collection_interval: 60  # seconds
+  retention_days: 30
+  dashboard_update_interval: 5  # seconds

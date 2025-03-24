@@ -1,0 +1,98 @@
+{
+    "campaign_id": "test_campaign_1",
+    "campaign_name": "Feature Testing Campaign",
+    "start_date": "2024-03-24T00:00:00Z",
+    "end_date": "2024-12-31T23:59:59Z",
+    "budget": {
+        "total_budget": 5000.0,
+        "daily_budget": 100.0,
+        "bid_strategy": "auto_optimize"
+    },
+    "ads": [
+        {
+            "ad_id": "test_ad_1",
+            "title": "Smart 4K TV - Great Deal!",
+            "description": "65-inch 4K Smart TV with HDR. Perfect for movies and gaming!",
+            "cta": "Shop Now",
+            "price": 699.99,
+            "image_url": "https://example.com/images/tv1.jpg",
+            "target_url": "https://example.com/products/tv1",
+            "display_format": "rich_media",
+            "keywords": ["tv", "television", "smart tv", "4k tv", "hdr tv", "resolution", "4k resolution", "hdr", "high definition"],
+            "categories": ["electronics", "home entertainment", "tvs"],
+            "intent_triggers": {
+                "purchase_intent": ["buy", "purchase", "deal", "price"],
+                "research_intent": ["compare", "review", "best", "difference", "resolution", "quality", "features"],
+                "price_check": ["how much", "cost", "price"]
+            },
+            "ab_test_variant": "A",
+            "targeting": {
+                "price_range": {
+                    "min": 500,
+                    "max": 1000
+                },
+                "user_preferences": ["quality", "technology", "entertainment"]
+            }
+        },
+        {
+            "ad_id": "test_ad_2",
+            "title": "Gaming Laptop Bundle",
+            "description": "RTX 4060 Gaming Laptop with Free Gaming Headset!",
+            "cta": "Learn More",
+            "price": 1299.99,
+            "image_url": "https://example.com/images/laptop1.jpg",
+            "target_url": "https://example.com/products/laptop1",
+            "display_format": "rich_media",
+            "keywords": ["laptop", "gaming", "rtx", "gaming laptop", "gaming pc"],
+            "categories": ["electronics", "computers", "gaming"],
+            "intent_triggers": {
+                "purchase_intent": ["buy gaming laptop", "gaming pc deal", "best price gaming"],
+                "research_intent": ["gaming laptop review", "best gaming laptop", "compare gaming laptops"],
+                "price_check": ["gaming laptop cost", "rtx laptop price"]
+            },
+            "ab_test_variant": "B",
+            "targeting": {
+                "price_range": {
+                    "min": 1000,
+                    "max": 2000
+                },
+                "user_preferences": ["gaming", "performance", "technology"]
+            }
+        },
+        {
+            "ad_id": "test_ad_3",
+            "title": "Wireless Noise-Canceling Headphones",
+            "description": "Premium sound quality with 30-hour battery life",
+            "cta": "Buy Now",
+            "price": 199.99,
+            "image_url": "https://example.com/images/headphones1.jpg",
+            "target_url": "https://example.com/products/headphones1",
+            "display_format": "rich_media",
+            "keywords": ["headphones", "wireless", "noise-canceling", "bluetooth", "audio"],
+            "categories": ["electronics", "audio", "accessories"],
+            "intent_triggers": {
+                "purchase_intent": ["buy headphones", "wireless headphones deal"],
+                "research_intent": ["best noise-canceling headphones", "headphone reviews"],
+                "price_check": ["headphone price", "cost of wireless headphones"]
+            },
+            "ab_test_variant": "A",
+            "targeting": {
+                "price_range": {
+                    "min": 150,
+                    "max": 300
+                },
+                "user_preferences": ["music", "quality", "mobility"]
+            }
+        }
+    ],
+    "testing_config": {
+        "ab_test_id": "test_1",
+        "variants": ["A", "B"],
+        "metrics": ["clicks", "conversions", "engagement_time"]
+    },
+    "performance_settings": {
+        "optimization_goal": "conversions",
+        "min_relevance_score": 0.3,
+        "frequency_cap": 3
+    }
+} 

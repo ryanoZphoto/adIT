@@ -1,0 +1,39 @@
+{
+    "company_id": "template_company",
+    "company_name": "Template Company, Inc.",
+    "contact_info": {
+        "primary_contact": "John Doe",
+        "email": "contact@templatecompany.com",
+        "phone": "+1-555-0123"
+    },
+    "billing_info": {
+        "billing_email": "billing@templatecompany.com",
+        "payment_method": "credit_card",
+        "billing_frequency": "monthly"
+    },
+    "ad_settings": {
+        "default_bid": 1.0,
+        "daily_budget": 100.0,
+        "default_match_weights": {
+            "keyword_match": 0.4,
+            "category_match": 0.3,
+            "intent_match": 0.3
+        },
+        "default_targeting": {
+            "min_relevance_score": 0.3,
+            "frequency_cap": 3,
+            "excluded_categories": []
+        }
+    },
+    "api_access": {
+        "api_key": "",
+        "webhook_url": "",
+        "notification_preferences": {
+            "budget_alerts": true,
+            "performance_reports": true,
+            "campaign_updates": true
+        }
+    },
+    "created_at": "",
+    "updated_at": ""
+} 

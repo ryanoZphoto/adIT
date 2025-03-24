@@ -1,0 +1,8 @@
+[logger]
+level = "debug"
+
+[client]
+showErrorDetails = true
+
+[browser]
+gatherUsageStats = true

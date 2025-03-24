@@ -1,0 +1,39 @@
+{
+    "company_id": "techgear",
+    "company_name": "TechGear Electronics",
+    "contact_info": {
+        "primary_contact": "Sarah Johnson",
+        "email": "sarah@techgear.example",
+        "phone": "+1-555-TECH-123"
+    },
+    "billing_info": {
+        "billing_email": "billing@techgear.example",
+        "payment_method": "credit_card",
+        "billing_frequency": "monthly"
+    },
+    "ad_settings": {
+        "default_bid": 2.5,
+        "daily_budget": 500.0,
+        "default_match_weights": {
+            "keyword_match": 0.4,
+            "category_match": 0.3,
+            "intent_match": 0.3
+        },
+        "default_targeting": {
+            "min_relevance_score": 0.4,
+            "frequency_cap": 5,
+            "excluded_categories": ["fashion", "food", "sports"]
+        }
+    },
+    "api_access": {
+        "api_key": "tg_test_key_123",
+        "webhook_url": "https://techgear.example/ad-callbacks",
+        "notification_preferences": {
+            "budget_alerts": true,
+            "performance_reports": true,
+            "campaign_updates": true
+        }
+    },
+    "created_at": "2024-03-24T00:00:00Z",
+    "updated_at": "2024-03-24T00:00:00Z"
+} 

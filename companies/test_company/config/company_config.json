@@ -1,0 +1,31 @@
+{
+    "company_id": "test_company",
+    "company_name": "Test Company Inc.",
+    "contact_info": {
+        "primary_contact": "Test Admin",
+        "email": "test@example.com",
+        "phone": "+1-555-0000"
+    },
+    "ad_settings": {
+        "default_bid": 1.0,
+        "daily_budget": 1000.0,
+        "default_match_weights": {
+            "keyword_match": 0.3,
+            "category_match": 0.3,
+            "intent_match": 0.4
+        },
+        "default_targeting": {
+            "min_relevance_score": 0.3,
+            "frequency_cap": 5,
+            "excluded_categories": []
+        }
+    },
+    "testing_flags": {
+        "enable_semantic_matching": true,
+        "enable_context_tracking": true,
+        "enable_ab_testing": true,
+        "enable_dynamic_pricing": true
+    },
+    "created_at": "2024-03-24T00:00:00Z",
+    "updated_at": "2024-03-24T00:00:00Z"
+} 

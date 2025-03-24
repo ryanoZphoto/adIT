@@ -1,0 +1,57 @@
+{
+    "metrics": {
+        "database": {
+            "path": "${AD_SERVICE_ROOT}/data/metrics.db",
+            "backup_dir": "${AD_SERVICE_ROOT}/data/backups"
+        },
+        "collection": {
+            "enabled": true,
+            "enhanced_features": true,
+            "prometheus_port": 8005,
+            "log_level": "INFO"
+        },
+        "retention": {
+            "days": 90,
+            "backup_frequency_days": 7
+        }
+    },
+    "ad_repository": {
+        "data_dir": "${AD_SERVICE_ROOT}/data",
+        "config_file": "${AD_SERVICE_ROOT}/data/ad_config.json",
+        "cache_enabled": true,
+        "cache_ttl_seconds": 300
+    },
+    "logging": {
+        "log_dir": "${AD_SERVICE_ROOT}/logs",
+        "level": "INFO",
+        "max_size_mb": 10,
+        "backup_count": 5,
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    },
+    "ad_matcher": {
+        "relevance_threshold": 0.7,
+        "max_ads_per_response": 3
+    },
+    "openai": {
+        "model": "gpt-3.5-turbo",
+        "temperature": 0.7,
+        "max_tokens": 150
+    },
+    "api": {
+        "endpoint": "https://api.example.com",
+        "key": ""
+    },
+    "paths": {
+        "charts_dir": "${AD_SERVICE_ROOT}/charts",
+        "temp_dir": "${AD_SERVICE_ROOT}/temp"
+    },
+    "app": {
+        "theme": "Light",
+        "response_delay_ms": 500,
+        "log_level": "INFO"
+    },
+    "ads": {
+        "relevance_threshold": 0.7,
+        "max_ads_per_response": 2
+    }
+}

@@ -1,0 +1,96 @@
+{
+    "campaign_id": "techgear_laptops_2024",
+    "campaign_name": "Premium Laptop Collection 2024",
+    "start_date": "2024-03-24T00:00:00Z",
+    "end_date": "2024-12-31T23:59:59Z",
+    "budget": {
+        "total_budget": 10000.0,
+        "daily_budget": 500.0,
+        "bid_strategy": "auto_optimize"
+    },
+    "targeting": {
+        "audience": {
+            "interests": ["technology", "computing", "productivity", "gaming"],
+            "demographics": {
+                "age_range": ["18-24", "25-34", "35-44"],
+                "locations": ["US", "CA", "UK"]
+            }
+        },
+        "intent_targeting": {
+            "purchase_intent": true,
+            "research_intent": true,
+            "target_intents": ["purchase_intent", "price_check", "comparison"]
+        },
+        "context_targeting": {
+            "categories": ["electronics", "computers", "laptops", "technology"],
+            "keywords": ["laptop", "computer", "notebook", "workstation", "gaming laptop"],
+            "excluded_keywords": ["desktop", "tablet", "smartphone"],
+            "excluded_categories": ["budget"]
+        }
+    },
+    "ads": [
+        {
+            "ad_id": "tg_laptop_pro_1",
+            "title": "TechGear Pro X15 - Ultimate Performance Laptop",
+            "description": "15-inch powerhouse with latest gen processor, 32GB RAM, and 4K display. Perfect for professionals and creators.",
+            "cta": "Shop Now",
+            "image_url": "https://techgear.example/images/pro-x15.jpg",
+            "target_url": "https://techgear.example/laptops/pro-x15",
+            "display_format": "rich_media",
+            "tracking_pixel": "https://analytics.techgear.example/pixel/pro-x15",
+            "match_weights": {
+                "keyword_match": 0.4,
+                "category_match": 0.3,
+                "intent_match": 0.3
+            },
+            "performance_metrics": {
+                "impressions": 0,
+                "clicks": 0,
+                "conversions": 0,
+                "spend": 0.0,
+                "ctr": 0.0,
+                "conversion_rate": 0.0,
+                "cost_per_conversion": 0.0
+            },
+            "active": true
+        },
+        {
+            "ad_id": "tg_laptop_gaming_1",
+            "title": "TechGear Titan Gaming Laptop",
+            "description": "Ultimate gaming experience with RTX 4080, 240Hz display, and RGB keyboard. Dominate your games.",
+            "cta": "Game On",
+            "image_url": "https://techgear.example/images/titan-gaming.jpg",
+            "target_url": "https://techgear.example/laptops/titan-gaming",
+            "display_format": "rich_media",
+            "tracking_pixel": "https://analytics.techgear.example/pixel/titan-gaming",
+            "match_weights": {
+                "keyword_match": 0.5,
+                "category_match": 0.3,
+                "intent_match": 0.2
+            },
+            "performance_metrics": {
+                "impressions": 0,
+                "clicks": 0,
+                "conversions": 0,
+                "spend": 0.0,
+                "ctr": 0.0,
+                "conversion_rate": 0.0,
+                "cost_per_conversion": 0.0
+            },
+            "active": true
+        }
+    ],
+    "performance_settings": {
+        "optimization_goal": "conversions",
+        "min_relevance_score": 0.4,
+        "frequency_cap": 3
+    },
+    "reporting": {
+        "frequency": "daily",
+        "metrics": ["impressions", "clicks", "conversions", "spend", "roas"],
+        "notification_email": "marketing@techgear.example"
+    },
+    "status": "active",
+    "created_at": "2024-03-24T00:00:00Z",
+    "updated_at": "2024-03-24T00:00:00Z"
+} 
