@@ -17,8 +17,25 @@ def load_config() -> dict:
     root_dir = os.getenv('AD_SERVICE_ROOT', '.')
     config_path = os.path.join(root_dir, 'config', 'config.yaml')
     
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        # If config file doesn't exist, return default configuration
+        return {
+            "paths": {
+                "companies_dir": "companies"
+            }
+        }
+        
+    # Ensure required configuration sections exist
+    if 'paths' not in config:
+        config['paths'] = {}
+        
+    # Add default companies_dir if not present
+    if 'companies_dir' not in config.get('paths', {}):
+        config['paths']['companies_dir'] = "companies"
+        
     return config
 
 def resolve_path(path: str) -> str:
@@ -67,19 +84,34 @@ class ConfigDrivenAdManager:
         
         # Set companies directory from config if not provided
         if companies_dir is None:
-            companies_dir = resolve_path(self.config['paths']['companies_dir'])
+            try:
+                companies_dir = resolve_path(self.config['paths']['companies_dir'])
+            except (KeyError, TypeError):
+                # Fallback to default directory if path config is invalid
+                companies_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "companies")
+                self.logger.warning(f"No companies_dir configured, using default: {companies_dir}")
         
-        self.companies_dir = companies_dir
-        self.logger.info(f"Loading company configurations from {self.companies_dir}")
-        
-        # Initialize tracking dictionaries
-        self.company_configs = {}
-        self.ads = {}
-        self.keyword_index = defaultdict(list)
-        self.category_index = defaultdict(list)
-        
-        # Load all company configurations
-        self._load_company_configs()
+        # Verify companies directory exists
+        if not os.path.exists(companies_dir):
+            self.logger.warning(f"Companies directory not found at {companies_dir}. Ad matching will be limited.")
+            # Create empty company data structures
+            self.companies_dir = companies_dir
+            self.company_configs = {}
+            self.ads = {}
+            self.keyword_index = defaultdict(list)
+            self.category_index = defaultdict(list)
+        else:
+            self.companies_dir = companies_dir
+            self.logger.info(f"Loading company configurations from {self.companies_dir}")
+            
+            # Initialize tracking dictionaries
+            self.company_configs = {}
+            self.ads = {}
+            self.keyword_index = defaultdict(list)
+            self.category_index = defaultdict(list)
+            
+            # Load all company configurations
+            self._load_company_configs()
         
         # Log initialization summary
         msg = (f"ConfigDrivenAdManager initialized with {len(self.ads)} ads "
