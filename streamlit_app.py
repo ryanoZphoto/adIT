@@ -28,8 +28,7 @@ def main():
         import ad_service
         st.write("ad_service package is already imported")
         
-        # Import all contents from the main module
-        # We need to prevent the main module from calling set_page_config again
+        # Import the main module
         import ad_service.gui.main as main_module
         
         # Delete the set_page_config function to prevent it from being called again
@@ -39,44 +38,55 @@ def main():
                 pass
             
             # Replace the real function with our dummy one
-            original_set_page_config = main_module.st.set_page_config
             main_module.st.set_page_config = dummy_set_page_config
-            
-        # Run the core logic from main module
-        # Exposing all the variables and functions from main
-        for name in dir(main_module):
-            if not name.startswith('__'):
-                globals()[name] = getattr(main_module, name)
+        
+        # Execute the main module's content
+        # This will run all the top-level code in main.py
+        # Due to how the main.py is structured, this should work to display the UI
+        try:
+            # Run any initialization functions from main if they exist
+            if hasattr(main_module, 'initialize_app'):
+                main_module.initialize_app()
                 
-        # Run any initialization functions from main if they exist
-        if hasattr(main_module, 'initialize_app'):
-            main_module.initialize_app()
-            
-        # Return control to the main module's execution flow
-        if hasattr(main_module, 'run_app'):
-            main_module.run_app()
+            # Call the main UI rendering function if it exists
+            if hasattr(main_module, 'run_app'):
+                main_module.run_app()
+            else:
+                # If main module doesn't have specific entry points, run what we know exists
+                # Try to access known functions/variables from the main module
+                if hasattr(main_module, 'render_chat_interface'):
+                    main_module.render_chat_interface()
+                elif hasattr(main_module, 'render_ad_manager_ui'):
+                    main_module.render_ad_manager_ui()
+        except Exception as app_error:
+            st.error(f"Error running main module: {app_error}")
             
     except ImportError as e:
         st.error(f"Error importing modules: {e}")
         show_debug_info()
         try:
-            # Try to run the main.py directly as fallback
-            from ad_service.gui.main import *
-        except ImportError as e2:
-            st.error(f"Error importing main module: {e2}")
-            try:
-                # Final fallback to just the Ad Manager UI
-                from ad_service.gui.ad_manager_ui import render_ad_manager_ui
-                render_ad_manager_ui()
-            except ImportError as e3:
-                st.error(f"Error importing ad_manager_ui: {e3}")
-                st.error("Directory structure:")
-                if os.path.exists('ad_service'):
-                    st.write(f"ad_service contents: {os.listdir('ad_service')}")
-                    if os.path.exists('ad_service/gui'):
-                        st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
-                else:
-                    st.error("ad_service directory not found!")
+            # Final fallback to just the Ad Manager UI
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "ad_manager_ui", 
+                os.path.join(current_dir, "ad_service/gui/ad_manager_ui.py")
+            )
+            if spec and spec.loader:
+                ad_manager = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(ad_manager)
+                if hasattr(ad_manager, 'render_ad_manager_ui'):
+                    ad_manager.render_ad_manager_ui()
+            else:
+                st.error("Could not load ad_manager_ui module")
+        except Exception as e3:
+            st.error(f"Error importing ad_manager_ui: {e3}")
+            st.error("Directory structure:")
+            if os.path.exists('ad_service'):
+                st.write(f"ad_service contents: {os.listdir('ad_service')}")
+                if os.path.exists('ad_service/gui'):
+                    st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
+            else:
+                st.error("ad_service directory not found!")
 
 # Run the main app
 if __name__ == "__main__":
