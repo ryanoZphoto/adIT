@@ -18,6 +18,20 @@ st.write(f"Directory contents: {os.listdir(current_dir)}")
 try:
     import ad_service
     st.write("ad_service package is already imported")
+    
+    # Now run the actual application
+    try:
+        from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+        
+        # Clear previous output
+        st.empty()
+        
+        # Run the application
+        render_ad_manager_ui()
+    except ImportError as e:
+        st.error(f"Error importing ad_manager_ui: {e}")
+        if os.path.exists('ad_service/gui'):
+            st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
 except ImportError:
     st.write("ad_service package not found, importing directly")
     try:
@@ -31,10 +45,4 @@ except ImportError:
             if os.path.exists('ad_service/gui'):
                 st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
         else:
-            st.error("ad_service directory not found!")
-
-# Now run the actual application
-from ad_service.gui.ad_manager_ui import render_ad_manager_ui
-
-# Run the application
-render_ad_manager_ui() 
+            st.error("ad_service directory not found!") 
