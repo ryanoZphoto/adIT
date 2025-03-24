@@ -19,19 +19,24 @@ try:
     import ad_service
     st.write("ad_service package is already imported")
     
-    # Now run the actual application
+    # Now run the actual application - using main module instead of just ad_manager_ui
     try:
-        from ad_service.gui.ad_manager_ui import render_ad_manager_ui
-        
         # Clear previous output
         st.empty()
         
-        # Run the application
-        render_ad_manager_ui()
+        # Import and run the main application that includes both chat and ad manager
+        from ad_service.gui.main import *
+        # The main module will handle UI routing between chat and ad manager
     except ImportError as e:
-        st.error(f"Error importing ad_manager_ui: {e}")
-        if os.path.exists('ad_service/gui'):
-            st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
+        st.error(f"Error importing main module: {e}")
+        st.error("Falling back to ad_manager_ui module")
+        try:
+            from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+            render_ad_manager_ui()
+        except ImportError as e2:
+            st.error(f"Error importing ad_manager_ui: {e2}")
+            if os.path.exists('ad_service/gui'):
+                st.write(f"ad_service/gui contents: {os.listdir('ad_service/gui')}")
 except ImportError:
     st.write("ad_service package not found, importing directly")
     try:
