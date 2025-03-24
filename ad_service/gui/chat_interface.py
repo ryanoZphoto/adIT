@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import sys
-import openai
+import httpx
 from openai import OpenAI
 
 # Add the parent directory to the Python path
@@ -52,11 +52,17 @@ def render_chat_interface():
             # Check if OpenAI API key is available
             if "openai_api_key" in st.session_state:
                 try:
-                    # Initialize OpenAI client with only the API key
-                    # Avoid using proxies or other problematic parameters
+                    # Create a custom httpx client without proxy configuration
+                    http_client = httpx.Client(
+                        # No proxy configuration here to avoid the error
+                        transport=httpx.HTTPTransport(local_address="0.0.0.0")
+                    )
+                    
+                    # Initialize OpenAI client with the API key and custom HTTP client
+                    # This avoids the proxies parameter error
                     client = OpenAI(
                         api_key=st.session_state["openai_api_key"],
-                        # No other parameters that might cause issues
+                        http_client=http_client
                     )
                     
                     # Use a placeholder message while waiting for response

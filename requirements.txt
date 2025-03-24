@@ -6,6 +6,7 @@ pydantic==2.4.2
 flask==2.0.1
 flask-restful==0.3.9
 pinecone-client==2.2.1
+httpx==0.28.1
 
 # Database
 sqlalchemy==2.0.23
@@ -51,4 +52,6 @@ pytest-cov==6.0.0
 # black==23.0.0
 # isort==5.0.0
 # flake8==7.0.0
-# mypy==1.0.0 
+# mypy==1.0.0
+
+# Check if httpx is already in requirements.txt and add it if not 
