@@ -10,6 +10,7 @@ import json
 import time
 from typing import Dict, List, Any, Tuple
 import re
+import httpx  # Add httpx import
 from openai import OpenAI  # Updated import for OpenAI
 from dotenv import load_dotenv
 import os
@@ -60,8 +61,17 @@ class QueryAnalyzer:
         self.default_model = self.openai_config["default_model"]
         self.embedding_model = self.openai_config["embedding_model"]
         
-        # Set up OpenAI client
-        self.client = OpenAI(api_key=self.api_key)
+        # Create a custom httpx client without proxy configuration
+        http_client = httpx.Client(
+            transport=httpx.HTTPTransport(local_address="0.0.0.0")
+        )
+        
+        # Set up OpenAI client with the custom HTTP client
+        # This avoids the proxies parameter error
+        self.client = OpenAI(
+            api_key=self.api_key,
+            http_client=http_client
+        )
         
         logger.info("Query analyzer initialized")
 
