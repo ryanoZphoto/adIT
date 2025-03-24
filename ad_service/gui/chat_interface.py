@@ -52,8 +52,12 @@ def render_chat_interface():
             # Check if OpenAI API key is available
             if "openai_api_key" in st.session_state:
                 try:
-                    # Initialize OpenAI client with the API key
-                    client = OpenAI(api_key=st.session_state["openai_api_key"])
+                    # Initialize OpenAI client with only the API key
+                    # Avoid using proxies or other problematic parameters
+                    client = OpenAI(
+                        api_key=st.session_state["openai_api_key"],
+                        # No other parameters that might cause issues
+                    )
                     
                     # Use a placeholder message while waiting for response
                     message_placeholder = st.empty()
@@ -86,6 +90,14 @@ def render_chat_interface():
                     error_message = f"Error connecting to OpenAI API: {str(e)}"
                     st.error(error_message)
                     st.session_state.messages.append({"role": "assistant", "content": error_message})
+                    
+                    # Provide more helpful troubleshooting advice
+                    st.warning("""
+                    Possible solutions:
+                    1. Make sure your API key is valid and not expired
+                    2. Check if you have sufficient credits in your OpenAI account
+                    3. This may be a temporary OpenAI service issue - try again in a few minutes
+                    """)
             else:
                 # Fallback response if no API key is provided
                 response = "Please provide your OpenAI API key in the sidebar to enable AI-powered responses."
