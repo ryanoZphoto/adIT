@@ -39,7 +39,6 @@ def show_debug_info():
     
     try:
         import ad_service
-        st.sidebar.write(f"ad_service version: {ad_service.__version__}")
         st.sidebar.write(f"ad_service path: {ad_service.__path__}")
     except (ImportError, AttributeError) as e:
         st.sidebar.error(f"Error getting ad_service info: {str(e)}")
@@ -47,9 +46,9 @@ def show_debug_info():
 def main():
     """Main application entry point"""
     try:
-        # Import components directly
-        from ad_service.gui.ad_manager_ui import AdManagerUI
-        from ad_service.gui.chat_interface import ChatInterface
+        # Import components directly - use function imports, not class imports
+        from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+        from ad_service.gui.chat_interface import render_chat_interface
         
         # Set up the sidebar for navigation
         st.sidebar.title("Navigation")
@@ -64,13 +63,11 @@ def main():
             
         # Show the selected component based on user choice
         if app_mode == "Chat Interface":
-            # Initialize and display the chat interface
-            chat_interface = ChatInterface()
-            chat_interface.display()
+            # Display the chat interface
+            render_chat_interface()
         else:
-            # Initialize and display the ad manager UI
-            ad_manager = AdManagerUI()
-            ad_manager.display()
+            # Display the ad manager UI
+            render_ad_manager_ui()
             
     except ImportError as e:
         st.error(f"Error importing required modules: {str(e)}")
@@ -79,10 +76,9 @@ def main():
         
         # Try a fallback to just the Ad Manager UI if available
         try:
-            from ad_service.gui.ad_manager_ui import AdManagerUI
-            st.warning("Chat Interface not available. Displaying Ad Manager UI only.")
-            ad_manager = AdManagerUI()
-            ad_manager.display()
+            from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+            st.warning("Chat Interface not available. Displaying Ad Manager UI.")
+            render_ad_manager_ui()
         except ImportError:
             st.error("Failed to load the Ad Manager UI component.")
             show_debug_info()
