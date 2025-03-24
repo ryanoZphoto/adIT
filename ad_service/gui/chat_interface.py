@@ -9,11 +9,24 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
+# Import ad matching components
+from ad_service.ad_matching.query_analyzer import QueryAnalyzer
+from ad_service.ad_matching.ad_matcher import AdMatcher
+
 # The page config has been moved to the main streamlit_app.py file
 # to avoid multiple st.set_page_config() calls
 
 def render_chat_interface():
     st.title("Ad Service Chat Interface")
+    
+    # Initialize ad matcher and query analyzer
+    try:
+        ad_matcher = AdMatcher()
+        query_analyzer = QueryAnalyzer()
+        ad_matching_available = True
+    except Exception as e:
+        st.sidebar.error(f"Ad matching system not available: {str(e)}")
+        ad_matching_available = False
     
     # API key handling in the sidebar
     with st.sidebar:
@@ -46,6 +59,31 @@ def render_chat_interface():
         # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
+        
+        # Check for relevant ads based on user message
+        if ad_matching_available:
+            try:
+                # Analyze the user's message for potential ad triggers
+                conversation_history = [{"role": msg["role"], "content": msg["content"]} 
+                                       for msg in st.session_state.messages]
+                
+                # Match ads based on conversation history
+                matched_ads = ad_matcher.match_ads(conversation_history)
+                
+                # Display matched ads in sidebar if any are found
+                if matched_ads:
+                    with st.sidebar:
+                        st.subheader("Suggested Products")
+                        for ad in matched_ads[:2]:  # Limit to top 2 ads
+                            display_ad = ad_matcher.get_ad_for_display(ad)
+                            with st.container():
+                                st.markdown(f"**{display_ad['title']}**")
+                                st.markdown(f"{display_ad['description']}")
+                                st.markdown(f"[{display_ad.get('call_to_action', 'Learn More')}]({display_ad['url']})")
+                                st.image(display_ad.get('image_url', 'https://via.placeholder.com/300x200'), width=200)
+                                st.markdown("---")
+            except Exception as e:
+                st.sidebar.error(f"Error matching ads: {str(e)}")
         
         # Display assistant response
         with st.chat_message("assistant"):
