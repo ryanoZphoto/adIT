@@ -33,4 +33,8 @@ except ImportError:
         else:
             st.error("ad_service directory not found!")
 
-# The imports above should have executed the Streamlit app code 
+# Now run the actual application
+from ad_service.gui.ad_manager_ui import render_ad_manager_ui
+
+# Run the application
+render_ad_manager_ui() 
