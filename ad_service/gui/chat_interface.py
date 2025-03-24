@@ -7,14 +7,10 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Set page config
-st.set_page_config(
-    page_title="Ad Service Chat",
-    page_icon="💬",
-    layout="wide"
-)
+# The page config has been moved to the main streamlit_app.py file
+# to avoid multiple st.set_page_config() calls
 
-def main():
+def render_chat_interface():
     st.title("Ad Service Chat Interface")
     
     # Initialize chat history
@@ -43,5 +39,6 @@ def main():
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response})
 
+# Rename the main function to render_chat_interface to match import in streamlit_app.py
 if __name__ == "__main__":
-    main() 
+    render_chat_interface() 
