@@ -564,12 +564,16 @@ class ConfigDrivenAdManager:
     def _find_keyword_matches(self, query: str) -> Dict[str, List[str]]:
         """Find all ads that have matching keywords with the query."""
         matches = {}
+        query = query.lower()  # Convert query to lowercase for case-insensitive matching
+        
+        self.logger.debug(f"Searching for matches in query: '{query}'")
+        self.logger.debug(f"Available keywords: {list(self.keyword_index.keys())}")
         
         # Extract words from query
         query_words = re.findall(r'\b\w+\b', query.lower())
         self.logger.debug(f"Query words: {query_words}")
         
-        # Check for each keyword
+        # Check for each keyword (exact word matches)
         for word in query_words:
             if word in self.keyword_index:
                 for ad_id in self.keyword_index[word]:
@@ -579,12 +583,29 @@ class ConfigDrivenAdManager:
         
         # Also check for multi-word keywords
         for keyword in self.keyword_index:
-            if ' ' in keyword and keyword in query:
+            if ' ' in keyword and keyword.lower() in query:
                 for ad_id in self.keyword_index[keyword]:
                     if ad_id not in matches:
                         matches[ad_id] = []
                     matches[ad_id].append(keyword)
         
+        # Check for partial matches (for keywords like 'm3' matching 'm3 chip')
+        for keyword in self.keyword_index:
+            # Skip already matched multi-word keywords
+            if ' ' in keyword and keyword.lower() in query:
+                continue
+                
+            # Check if the keyword is contained within any query word
+            # This handles cases like 'm3' in 'm3 chip'
+            for query_word in query_words:
+                if keyword.lower() in query_word and keyword.lower() != query_word:
+                    for ad_id in self.keyword_index[keyword]:
+                        if ad_id not in matches:
+                            matches[ad_id] = []
+                        if keyword not in matches[ad_id]:  # Avoid duplicates
+                            matches[ad_id].append(keyword)
+        
+        self.logger.debug(f"Keyword matches found: {matches}")
         return matches
     
     def _find_category_matches(self, query: str) -> Dict[str, List[str]]:

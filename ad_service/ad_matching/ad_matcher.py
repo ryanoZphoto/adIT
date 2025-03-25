@@ -128,45 +128,48 @@ class AdMatcher:
 
     def _calculate_relevance(self, ad: Dict[str, Any], analysis: Dict[str, Any]) -> float:
         """
-        Calculate the relevance score of an ad based on the conversation analysis
+        Calculate relevance score based on multiple factors
         
         Args:
-            ad: Ad data
+            ad: Ad data to evaluate
             analysis: Analysis of the conversation
             
         Returns:
-            Relevance score (0-1)
+            Relevance score between 0 and 1
         """
-        # Initialize score components
-        keyword_score = 0.0
-        category_score = 0.0
-        semantic_score = 0.0
-        negative_keyword_score = 1.0  # Start with perfect score, reduce if negative keywords match
-        
-        # Keyword matching
+        # Get ad keywords and categories
         ad_keywords = [k.lower() for k in ad.get("keywords", [])]
-        conversation_tokens = set(analysis.get("tokens", []))
-        entities = set(analysis.get("entities", []))
-        topics = set(analysis.get("topics", []))
+        ad_categories = [c.lower() for c in ad.get("categories", [])]
         
-        # Match keywords against tokens, entities, and topics
-        relevant_terms = conversation_tokens.union(entities).union(topics)
-        if ad_keywords and relevant_terms:
-            matches = sum(1 for keyword in ad_keywords if any(keyword in term.lower() for term in relevant_terms))
-            keyword_score = matches / len(ad_keywords) if matches > 0 else 0.0
+        # Get conversation tokens and entities
+        tokens = analysis.get("tokens", [])
+        entities = analysis.get("entities", [])
+        topics = analysis.get("topics", [])
         
-        # Category matching
-        ad_categories = set(ad.get("categories", []))
-        context_categories = set(analysis.get("categories", []))
-        if ad_categories and context_categories:
-            category_matches = len(ad_categories.intersection(context_categories))
-            category_score = category_matches / len(ad_categories) if category_matches > 0 else 0.0
+        # Calculate keyword match score
+        token_matches = sum(1 for token in tokens if token.lower() in ad_keywords)
+        entity_matches = sum(1 for entity in entities if entity.lower() in ad_keywords)
+        total_matches = token_matches + entity_matches
         
-        # Semantic matching
-        semantic_score = analysis.get("semantic_score", {}).get(ad["id"], 0.0)
+        # Normalize score based on the number of keywords
+        max_keywords = max(1, min(len(ad_keywords), 10))  # Cap at 10 to avoid over-weighting
+        keyword_score = min(1.0, total_matches / max_keywords)
         
-        # Check negative keywords
-        negative_keywords = [k.lower() for k in ad.get("negative_keywords", [])]
+        # Calculate category match score
+        category_matches = sum(1 for topic in topics if topic.lower() in ad_categories)
+        max_categories = max(1, min(len(ad_categories), 5))  # Cap at 5
+        category_score = min(1.0, category_matches / max_categories)
+        
+        # Get semantic score if available
+        # Get the ad ID, supporting both 'id' and 'ad_id' field names
+        ad_id = ad.get("id", ad.get("ad_id", "unknown"))
+        semantic_score = analysis.get("semantic_score", {}).get(ad_id, 0.0)
+        
+        # Check for negative keywords
+        negative_keywords = ad.get("negative_keywords", [])
+        negative_keyword_score = 1.0  # Default multiplier
+        relevant_terms = tokens + entities
+        
         for neg_keyword in negative_keywords:
             if any(neg_keyword in term.lower() for term in relevant_terms):
                 negative_keyword_score = 0.0
