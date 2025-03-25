@@ -156,7 +156,7 @@ def render_chat_interface():
                     response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
                         messages=[
-                            {"role": "system", "content": "You are a helpful assistant for an ad service. Provide informative and concise responses about advertising, marketing, and related topics."},
+                            {"role": "system", "content": "You are a helpful, general-purpose assistant. Provide informative and friendly responses on any topic the user asks about. You may occasionally show relevant advertisements based on keywords in the conversation, but your primary role is to be helpful on any subject."},
                             *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
                         ],
                         stream=True
