@@ -4,6 +4,7 @@ import sys
 import httpx
 from openai import OpenAI
 import time
+import uuid
 
 # Add the parent directory to the Python path
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,12 +15,22 @@ if parent_dir not in sys.path:
 from ad_service.ad_matching.query_analyzer import QueryAnalyzer
 from ad_service.ad_matching.ad_matcher import AdMatcher
 from ad_service.ad_delivery.config_driven_ad_manager import ConfigDrivenAdManager
+# Import analytics components
+from ad_service.analytics.metrics_collector import MetricsCollector
 
 # The page config has been moved to the main streamlit_app.py file
 # to avoid multiple st.set_page_config() calls
 
 def render_chat_interface():
     st.title("Ad Service Chat Interface")
+    
+    # Initialize metrics collector for tracking
+    try:
+        metrics_collector = MetricsCollector()
+        metrics_available = True
+    except Exception as e:
+        st.sidebar.error(f"Metrics collection not available: {str(e)}")
+        metrics_available = False
     
     # Initialize ad matcher, query analyzer and config driven ad manager
     try:
@@ -31,6 +42,14 @@ def render_chat_interface():
     except Exception as e:
         st.sidebar.error(f"Ad matching system not available: {str(e)}")
         ad_matching_available = False
+    
+    # Generate a unique session ID if not already in session state
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+    
+    # Track user as active in metrics
+    if metrics_available:
+        metrics_collector.active_users_gauge.inc()
     
     # API key handling in the sidebar
     with st.sidebar:
@@ -50,6 +69,10 @@ def render_chat_interface():
     if "messages" not in st.session_state:
         st.session_state.messages = []
     
+    # Initialize ad tracking
+    if "displayed_ads" not in st.session_state:
+        st.session_state.displayed_ads = {}  # {ad_id: timestamp}
+    
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -60,9 +83,16 @@ def render_chat_interface():
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         
+        # Record query in metrics
+        if metrics_available:
+            metrics_collector.ad_requests_counter.inc()
+            
         # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
+        
+        # Start query processing timer if metrics available
+        query_start_time = time.time()
         
         # Check for relevant ads based on user message
         if ad_matching_available:
@@ -82,10 +112,37 @@ def render_chat_interface():
                             st.subheader("Suggested Products (AdMatcher)")
                             for ad_result in matched_ads[:2]:  # Limit to top 2 ads
                                 ad = ad_result["ad"]
+                                ad_id = ad.get('id', ad.get('ad_id', str(hash(ad['title']))))
+                                
+                                # Record impression in metrics collector
+                                if metrics_available:
+                                    metrics_collector.log_ad_impression(
+                                        query=prompt,
+                                        ad_id=ad_id,
+                                        relevance_score=ad_result.get("score", 0.5)
+                                    )
+                                    metrics_collector.ad_impressions_counter.inc()
+                                
+                                # Store in session state for tracking
+                                st.session_state.displayed_ads[ad_id] = time.time()
+                                
                                 with st.container():
                                     st.markdown(f"**{ad['title']}**")
                                     st.markdown(f"{ad['description']}")
-                                    st.markdown(f"[{ad.get('call_to_action', 'Learn More')}]({ad['url']})")
+                                    
+                                    # Create a clickable button for tracking
+                                    if st.button(ad.get('call_to_action', 'Learn More'), key=f"ad_click_{ad_id}"):
+                                        # Record click in metrics collector
+                                        if metrics_available:
+                                            metrics_collector.log_ad_click(
+                                                ad_id=ad_id,
+                                                user_id=st.session_state.session_id
+                                            )
+                                            metrics_collector.ad_clicks_counter.inc()
+                                        
+                                        # Open URL
+                                        st.markdown(f"<script>window.open('{ad['url']}', '_blank')</script>", unsafe_allow_html=True)
+                                    
                                     if 'image_url' in ad:
                                         st.image(ad['image_url'], width=200)
                                     st.markdown("---")
@@ -96,7 +153,7 @@ def render_chat_interface():
                 try:
                     # Create simple context dictionary
                     context = {
-                        'conversation_id': 'chat_ui',
+                        'conversation_id': st.session_state.session_id,
                         'timestamp': time.time()
                     }
                     
@@ -113,6 +170,23 @@ def render_chat_interface():
                     if relevant_ad:
                         with st.sidebar:
                             st.subheader("Suggested Products (ConfigDriven)")
+                            
+                            # Get ad ID 
+                            ad_id = relevant_ad.get('ad_id', relevant_ad.get('id', str(hash(relevant_ad['title']))))
+                            
+                            # Record impression in metrics collector
+                            if metrics_available:
+                                score = relevant_ad.get('match_factors', {}).get('total_score', 0.5)
+                                metrics_collector.log_ad_impression(
+                                    query=prompt,
+                                    ad_id=ad_id,
+                                    relevance_score=score
+                                )
+                                metrics_collector.ad_impressions_counter.inc()
+                            
+                            # Store in session state for tracking
+                            st.session_state.displayed_ads[ad_id] = time.time()
+                            
                             with st.container():
                                 st.markdown(f"**{relevant_ad['title']}**")
                                 st.markdown(f"{relevant_ad['description']}")
@@ -121,7 +195,19 @@ def render_chat_interface():
                                 cta = relevant_ad.get('cta', relevant_ad.get('call_to_action', 'Learn More'))
                                 target_url = relevant_ad.get('target_url', relevant_ad.get('url', '#'))
                                 
-                                st.markdown(f"[{cta}]({target_url})")
+                                # Create a clickable button for tracking
+                                if st.button(cta, key=f"config_ad_click_{ad_id}"):
+                                    # Record click in metrics collector
+                                    if metrics_available:
+                                        metrics_collector.log_ad_click(
+                                            ad_id=ad_id, 
+                                            user_id=st.session_state.session_id
+                                        )
+                                        metrics_collector.ad_clicks_counter.inc()
+                                    
+                                    # Open URL
+                                    st.markdown(f"<script>window.open('{target_url}', '_blank')</script>", unsafe_allow_html=True)
+                                
                                 if 'image_url' in relevant_ad:
                                     st.image(relevant_ad['image_url'], width=200)
                                 st.markdown("---")
@@ -152,6 +238,9 @@ def render_chat_interface():
                     message_placeholder = st.empty()
                     message_placeholder.markdown("Thinking...")
                     
+                    # Record start time for model generation
+                    model_start_time = time.time()
+                    
                     # Call the OpenAI API
                     response = client.chat.completions.create(
                         model="gpt-3.5-turbo",
@@ -171,6 +260,16 @@ def render_chat_interface():
                     
                     # Display the final response
                     message_placeholder.markdown(full_response)
+                    
+                    # Record model generation time
+                    model_generation_time = time.time() - model_start_time
+                    if metrics_available:
+                        metrics_collector.log_model_generation(
+                            query=prompt,
+                            response=full_response[:200],  # First 200 chars
+                            model="gpt-3.5-turbo",
+                            generation_time=model_generation_time
+                        )
                     
                     # Add assistant response to chat history
                     st.session_state.messages.append({"role": "assistant", "content": full_response})
@@ -192,6 +291,11 @@ def render_chat_interface():
                 response = "Please provide your OpenAI API key in the sidebar to enable AI-powered responses."
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # Record query processing time
+        if metrics_available:
+            query_processing_time = time.time() - query_start_time
+            metrics_collector.query_processing_time.observe(query_processing_time)
 
 # Rename the main function to render_chat_interface to match import in streamlit_app.py
 if __name__ == "__main__":

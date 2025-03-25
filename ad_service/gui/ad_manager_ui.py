@@ -1,18 +1,25 @@
-import streamlit as st
-import json
 import os
+import json
 import logging
-import pandas as pd
+import time
 import datetime
-import uuid
-from pathlib import Path
+import pandas as pd
+import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Tuple
+import plotly.graph_objects as go
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Import ad service modules
+from ad_service.ad_delivery.config_loader import (
+    load_all_ad_configs,
+    save_ad_config,
+    update_ad_config,
+    delete_ad
+)
 
 # Constants
 DEFAULT_IMAGE_URL = "https://via.placeholder.com/300x200?text=Ad+Image"
@@ -197,25 +204,44 @@ def plot_ad_performance(df: pd.DataFrame, metrics: List[str]) -> None:
     
     st.pyplot(fig)
 
-def display_ad_analytics(ad: Dict[str, Any]) -> None:
-    """Display analytics for a given ad."""
-    st.subheader("📊 Ad Performance Analytics")
-    
-    # Get performance data
-    df, metrics_summary = simulate_ad_performance(ad['id'])
-    
-    # Allow user to select which metrics to view
-    metrics = st.multiselect(
-        "Select metrics to display:", 
-        ["Impressions", "Clicks", "CTR"],
-        default=["Impressions", "Clicks"],
-        key=f"metrics_select_{ad['id']}"  # Add unique key based on ad ID
-    )
-    
-    if metrics:
-        plot_ad_performance(df, metrics)
-    else:
-        st.warning("Please select at least one metric to display the chart.")
+def display_ad_analytics(ad_id, ad_config):
+    """
+    Display analytics for a specific ad.
+    """
+    try:
+        # Check if we have metrics available in session state
+        if 'ad_metrics' in st.session_state:
+            # Get real metrics
+            impressions = st.session_state.ad_metrics['impressions'].get(ad_id, 0)
+            clicks = st.session_state.ad_metrics['clicks'].get(ad_id, 0)
+            ctr = st.session_state.ad_metrics['ctr'].get(ad_id, 0)
+        else:
+            # Fallback to simulated metrics if no real data available
+            impressions, clicks, ctr = simulate_ad_performance(ad_id)
+        
+        # Format CTR as percentage
+        formatted_ctr = f"{ctr * 100:.2f}%" if ctr else "0.00%"
+        
+        # Create columns for metrics display
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(label="Impressions", value=impressions)
+            
+        with col2:
+            st.metric(label="Clicks", value=clicks)
+            
+        with col3:
+            st.metric(label="CTR", value=formatted_ctr)
+        
+        # If we have time-based metrics, we can show them in a chart
+        if 'ad_metrics' in st.session_state and ad_id in st.session_state.ad_metrics['impressions']:
+            # This would need a more sophisticated implementation with actual time-series data
+            st.subheader("Performance Over Time")
+            st.info("Historical performance data will be shown here as it accumulates.")
+        
+    except Exception as e:
+        st.error(f"Error displaying analytics: {e}")
 
 def create_new_ad_form(ads: List[Dict[str, Any]]) -> Tuple[bool, str]:
     """Display the form for creating a new ad and process the submission."""
@@ -728,115 +754,217 @@ def edit_ad_form(ad: Dict[str, Any], ads: List[Dict[str, Any]]) -> bool:
     
     return updated
 
-def render_dashboard(ads: List[Dict[str, Any]]) -> None:
-    """Render a dashboard overview of all ads."""
-    st.header("Ad Dashboard")
+def render_dashboard():
+    """
+    Render the dashboard overview of all ads.
+    """
+    st.header("Ad Management Dashboard")
     
-    # Create some key metrics
-    active_ads = sum(1 for ad in ads if ad.get("active", True))
-    inactive_ads = len(ads) - active_ads
-    unique_keywords = set()
-    unique_categories = set()
-    campaigns = set()
-    
-    for ad in ads:
-        unique_keywords.update(ad.get("keywords", []))
-        unique_categories.update(ad.get("categories", []))
-        if ad.get("campaign"):
-            campaigns.add(ad.get("campaign"))
-    
-    # Display metrics in columns
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Ads", len(ads))
-    
-    with col2:
-        st.metric("Active Ads", active_ads)
-    
-    with col3:
-        st.metric("Unique Keywords", len(unique_keywords))
-    
-    with col4:
-        st.metric("Campaigns", len(campaigns))
-    
-    # Create and display some charts
-    if ads:
-        st.subheader("Ad Status")
+    try:
+        # Load ad configurations
+        ad_configs = load_all_ad_configs()
         
-        # Create a pie chart for active vs inactive ads
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.pie(
-            [active_ads, inactive_ads],
-            labels=['Active', 'Inactive'],
-            autopct='%1.1f%%',
-            startangle=90,
-            colors=['#4CAF50', '#F44336']
-        )
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-        st.pyplot(fig)
-        
-        # Display campaigns if any exist
-        if campaigns:
-            st.subheader("Ads by Campaign")
-            
-            # Count ads per campaign
-            campaign_counts = {}
-            for ad in ads:
-                campaign = ad.get("campaign", "No Campaign")
-                if not campaign:
-                    campaign = "No Campaign"
-                campaign_counts[campaign] = campaign_counts.get(campaign, 0) + 1
-            
-            # Create a bar chart
-            fig, ax = plt.subplots(figsize=(10, 4))
-            campaigns = list(campaign_counts.keys())
-            counts = list(campaign_counts.values())
-            
-            ax.bar(campaigns, counts, color='#2196F3')
-            ax.set_xlabel('Campaign')
-            ax.set_ylabel('Number of Ads')
-            ax.set_title('Ads by Campaign')
-            
-            # Rotate x-axis labels for better readability
-            plt.xticks(rotation=45, ha='right')
-            
-            # Adjust layout to make room for x-labels
-            plt.tight_layout()
-            
-            st.pyplot(fig)
-        
-        # Display top keywords
-        st.subheader("Top Keywords")
-        
-        # Count usage of each keyword
-        keyword_counts = {}
-        for ad in ads:
-            for keyword in ad.get("keywords", []):
-                keyword_counts[keyword] = keyword_counts.get(keyword, 0) + 1
-        
-        # Sort and get top 10
-        top_keywords = sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-        
-        if top_keywords:
-            # Create a bar chart
-            fig, ax = plt.subplots(figsize=(10, 4))
-            keywords = [k[0] for k in top_keywords]
-            counts = [k[1] for k in top_keywords]
-            
-            ax.barh(keywords, counts, color='#FF9800')
-            ax.set_xlabel('Number of Ads')
-            ax.set_ylabel('Keyword')
-            ax.set_title('Top 10 Keywords')
-            
-            # Adjust layout
-            plt.tight_layout()
-            
-            st.pyplot(fig)
+        # Get metrics from session state if available
+        if 'ad_metrics' in st.session_state:
+            metrics = st.session_state.ad_metrics
+            using_real_metrics = True
         else:
-            st.info("No keywords found in ads.")
-    else:
-        st.info("No ads found. Start by creating some ads to see dashboard analytics.")
+            using_real_metrics = False
+        
+        # Calculate key metrics
+        total_ads = len(ad_configs)
+        active_ads = sum(1 for ad in ad_configs.values() if ad.get('active', True))
+        
+        # Extract all unique keywords across all ad configs
+        all_keywords = set()
+        for ad in ad_configs.values():
+            if 'keywords' in ad:
+                all_keywords.update(ad['keywords'])
+        
+        # Get unique campaigns
+        campaigns = set()
+        for ad in ad_configs.values():
+            if 'campaign' in ad:
+                campaigns.add(ad['campaign'])
+        
+        # Calculate metrics for keywords and campaigns (this could be enhanced with real data)
+        keyword_counts = {}
+        if using_real_metrics and 'keyword_hits' in metrics:
+            # Use real keyword hit data
+            keyword_counts = metrics['keyword_hits']
+        else:
+            # Fallback to static count of 1 per keyword
+            for keyword in all_keywords:
+                keyword_counts[keyword] = 1
+        
+        # Get real impressions and clicks metrics if available
+        total_impressions = metrics.get('total_impressions', 0) if using_real_metrics else sum(simulate_ad_performance(ad_id)[0] for ad_id in ad_configs)
+        total_clicks = metrics.get('total_clicks', 0) if using_real_metrics else sum(simulate_ad_performance(ad_id)[1] for ad_id in ad_configs)
+        overall_ctr = 0 if total_impressions == 0 else total_clicks / total_impressions
+        
+        # Create columns for KPI cards
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(label="Total Ads", value=total_ads)
+        
+        with col2:
+            st.metric(label="Active Ads", value=active_ads)
+            
+        with col3:
+            st.metric(label="Unique Keywords", value=len(all_keywords))
+            
+        with col4:
+            st.metric(label="Campaigns", value=len(campaigns))
+        
+        # Create a second row of KPIs with performance metrics
+        st.markdown("---")
+        st.subheader("Performance Metrics")
+        
+        # Add a note about metrics source
+        if using_real_metrics:
+            st.success("Showing real-time metrics from current chat sessions")
+        else:
+            st.warning("Using simulated metrics (No active chat sessions detected)")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(label="Total Impressions", value=total_impressions)
+            
+        with col2:
+            st.metric(label="Total Clicks", value=total_clicks)
+            
+        with col3:
+            st.metric(label="Overall CTR", value=f"{overall_ctr * 100:.2f}%")
+        
+        # Charts row
+        st.markdown("---")
+        st.subheader("Analytics")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Create a pie chart for active vs inactive ads
+            fig = go.Figure(
+                data=[go.Pie(
+                    labels=['Active', 'Inactive'],
+                    values=[active_ads, total_ads - active_ads],
+                    hole=.4,
+                    marker_colors=['#1f77b4', '#d3d3d3']
+                )]
+            )
+            fig.update_layout(title_text="Active vs Inactive Ads")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Create a bar chart for ads by campaign
+            campaign_data = {}
+            for ad in ad_configs.values():
+                campaign = ad.get('campaign', 'Uncategorized')
+                if campaign in campaign_data:
+                    campaign_data[campaign] += 1
+                else:
+                    campaign_data[campaign] = 1
+            
+            fig = go.Figure(
+                data=[go.Bar(
+                    x=list(campaign_data.keys()),
+                    y=list(campaign_data.values()),
+                    marker_color='#1f77b4'
+                )]
+            )
+            fig.update_layout(title_text="Ads by Campaign")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Create a bar chart for top keywords
+        if keyword_counts:
+            # Sort keywords by count and take top 10
+            sorted_keywords = sorted(keyword_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            
+            fig = go.Figure(
+                data=[go.Bar(
+                    x=[kw[0] for kw in sorted_keywords],
+                    y=[kw[1] for kw in sorted_keywords],
+                    marker_color='#1f77b4'
+                )]
+            )
+            fig.update_layout(
+                title_text="Top Keywords by Usage",
+                xaxis_title="Keyword",
+                yaxis_title="Count"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Display ad performance metrics if available
+        if using_real_metrics and metrics['impressions']:
+            st.subheader("Ad Performance")
+            
+            # Get top ads by impressions
+            ad_impressions = sorted(metrics['impressions'].items(), key=lambda x: x[1], reverse=True)
+            
+            # Create a dataframe for the performance data
+            performance_data = []
+            for ad_id, impressions in ad_impressions:
+                if ad_id in ad_configs:
+                    ad_title = ad_configs[ad_id].get('title', 'Unknown Ad')
+                    clicks = metrics['clicks'].get(ad_id, 0)
+                    ctr = 0 if impressions == 0 else clicks / impressions
+                    
+                    performance_data.append({
+                        'Ad ID': ad_id,
+                        'Ad Title': ad_title,
+                        'Impressions': impressions,
+                        'Clicks': clicks,
+                        'CTR': f"{ctr * 100:.2f}%"
+                    })
+            
+            if performance_data:
+                performance_df = pd.DataFrame(performance_data)
+                st.dataframe(performance_df, use_container_width=True)
+            else:
+                st.info("No ad performance data available yet.")
+        
+        # Display daily metrics if available
+        if using_real_metrics and metrics.get('daily_metrics'):
+            st.subheader("Daily Performance")
+            
+            daily_data = []
+            for date, daily_metrics in metrics['daily_metrics'].items():
+                daily_data.append({
+                    'Date': date,
+                    'Impressions': daily_metrics['impressions'],
+                    'Clicks': daily_metrics['clicks'],
+                    'CTR': f"{(daily_metrics['clicks'] / daily_metrics['impressions'] * 100) if daily_metrics['impressions'] > 0 else 0:.2f}%"
+                })
+            
+            if daily_data:
+                daily_df = pd.DataFrame(daily_data)
+                st.dataframe(daily_df, use_container_width=True)
+                
+                # Create a line chart of daily metrics
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=[d['Date'] for d in daily_data],
+                    y=[d['Impressions'] for d in daily_data],
+                    mode='lines+markers',
+                    name='Impressions'
+                ))
+                fig.add_trace(go.Scatter(
+                    x=[d['Date'] for d in daily_data],
+                    y=[d['Clicks'] for d in daily_data],
+                    mode='lines+markers',
+                    name='Clicks'
+                ))
+                fig.update_layout(
+                    title='Daily Metrics Trend',
+                    xaxis_title='Date',
+                    yaxis_title='Count'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error rendering dashboard: {e}")
 
 def view_existing_ads(ads: List[Dict[str, Any]]) -> bool:
     """Display existing ads with filtering, sorting, and search capabilities."""
@@ -979,100 +1107,68 @@ def view_existing_ads(ads: List[Dict[str, Any]]) -> bool:
                 create_ad_preview(ad)
             
             with detail_tab2:
-                display_ad_analytics(ad)
+                display_ad_analytics(ad['id'], ad)
     
     return reloaded
 
 def render_ad_manager_ui():
-    """Render the ad manager UI in Streamlit."""
+    """
+    Render the ad manager UI in Streamlit.
+    """
     st.title("Ad Manager")
     
-    # Initialize session state if needed
-    if "edit_ad" not in st.session_state:
-        st.session_state["edit_ad"] = None
+    # Initialize session state for ad manager if it doesn't exist
+    if "ad_manager_current_tab" not in st.session_state:
+        st.session_state.ad_manager_current_tab = 0
     
-    # Load current configuration
-    config = load_ad_config()
-    ads = config.get("ads", [])
+    if "show_create_new_ad" not in st.session_state:
+        st.session_state.show_create_new_ad = False
     
-    # Create tabs for different sections
-    tab1, tab2, tab3 = st.tabs(["Dashboard", "Create New Ad", "View & Edit Ads"])
+    if "ad_manager_notification" not in st.session_state:
+        st.session_state.ad_manager_notification = None
     
+    # Load current configurations
+    ad_configs = load_all_ad_configs()
+    
+    # Display notification if present
+    if st.session_state.ad_manager_notification:
+        st.success(st.session_state.ad_manager_notification)
+        st.session_state.ad_manager_notification = None
+    
+    # Create tabs
+    tabs = ["Dashboard", "Create New Ad", "View & Edit Ads"]
+    tab1, tab2, tab3 = st.tabs(tabs)
+    
+    # Callback to handle tab selection
+    def on_tab_change():
+        st.session_state.ad_manager_current_tab = tabs.index(st.session_state.selected_tab)
+    
+    # Show dashboard in first tab
     with tab1:
-        render_dashboard(ads)
+        render_dashboard()
     
+    # Show form to create new ad in second tab
     with tab2:
-        st.header("Create a New Ad")
-        ad_added, added_title = create_new_ad_form(ads)
-        
-        # Add the reload button outside the form
-        if ad_added:
-            if st.button("Reload Ad Manager", key="reload_after_add"):
-                # Force reload of the ConfigDrivenAdManager
-                try:
-                    from ad_service.ad_delivery.config_driven_ad_manager import ConfigDrivenAdManager
-                    ad_manager = ConfigDrivenAdManager()
-                    ad_manager.reload_config()
-                    st.success("Ad Manager reloaded!")
-                except Exception as e:
-                    st.error(f"Error reloading Ad Manager: {str(e)}")
-                    logger.exception("Error reloading Ad Manager")
+        create_success, new_ad_id = create_new_ad_form(list(ad_configs.values()))
+        if create_success:
+            # Set notification message
+            st.session_state.ad_manager_notification = f"Ad created successfully! Ad ID: {new_ad_id}"
+            # Reload ad manager
+            st.rerun()
     
+    # Show existing ads in third tab
     with tab3:
-        st.header("Existing Ads")
+        # Convert the ad configs dictionary to a list for compatibility
+        ads_list = []
+        for ad_id, ad_config in ad_configs.items():
+            # Ensure the ad has an id field (use the dictionary key if not present)
+            if 'id' not in ad_config:
+                ad_config['id'] = ad_id
+            ads_list.append(ad_config)
         
-        # Handle edit mode if active
-        if st.session_state["edit_ad"]:
-            # Find the ad to edit
-            edit_ad = None
-            for ad in ads:
-                if ad.get("id") == st.session_state["edit_ad"]:
-                    edit_ad = ad
-                    break
-            
-            if edit_ad:
-                st.subheader(f"Edit Ad: {edit_ad.get('title', '')}")
-                
-                # Add back button
-                if st.button("← Back to Ad List", key="back_from_edit"):
-                    st.session_state["edit_ad"] = None
-                    st.experimental_rerun()
-                
-                # Display edit form
-                updated = edit_ad_form(edit_ad, ads)
-                
-                if updated:
-                    if st.button("Reload Ad Manager", key="reload_after_edit"):
-                        try:
-                            from ad_service.ad_delivery.config_driven_ad_manager import ConfigDrivenAdManager
-                            ad_manager = ConfigDrivenAdManager()
-                            ad_manager.reload_config()
-                            st.success("Ad Manager reloaded!")
-                            st.session_state["edit_ad"] = None  # Exit edit mode
-                            st.experimental_rerun()
-                        except Exception as e:
-                            st.error(f"Error reloading Ad Manager: {str(e)}")
-                            logger.exception("Error reloading Ad Manager")
-            else:
-                st.error(f"Ad with ID {st.session_state['edit_ad']} not found")
-                st.session_state["edit_ad"] = None
-                st.experimental_rerun()
-        else:
-            # Display the ad list
-            reloaded = view_existing_ads(ads)
-            
-            if reloaded:
-                if st.button("Reload Ad Manager", key="reload_after_delete"):
-                    try:
-                        from ad_service.ad_delivery.config_driven_ad_manager import ConfigDrivenAdManager
-                        ad_manager = ConfigDrivenAdManager()
-                        ad_manager.reload_config()
-                        st.success("Ad Manager reloaded!")
-                        st.experimental_rerun()
-                    except Exception as e:
-                        st.error(f"Error reloading Ad Manager: {str(e)}")
-                        logger.exception("Error reloading Ad Manager")
-
+        reloaded = view_existing_ads(ads_list)
+        if reloaded:
+            st.rerun()
 
 if __name__ == "__main__":
     render_ad_manager_ui()
