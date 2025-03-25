@@ -4,7 +4,7 @@ import logging
 import re
 import yaml
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Any
 from collections import defaultdict
 import time
 
@@ -589,21 +589,50 @@ class ConfigDrivenAdManager:
                         matches[ad_id] = []
                     matches[ad_id].append(keyword)
         
-        # Check for partial matches (for keywords like 'm3' matching 'm3 chip')
+        # Check for partial matches in both directions:
+        # 1. Keywords contained within query words (e.g., "tv" in "smart tv")
+        # 2. Query words contained within keywords (e.g., "apple" when keyword is "apple products")
         for keyword in self.keyword_index:
-            # Skip already matched multi-word keywords
-            if ' ' in keyword and keyword.lower() in query:
+            # Skip already matched exact keywords or multi-word keywords
+            is_already_matched = (keyword.lower() in query_words or 
+                                (' ' in keyword and keyword.lower() in query))
+            if is_already_matched:
                 continue
                 
-            # Check if the keyword is contained within any query word
-            # This handles cases like 'm3' in 'm3 chip'
+            # Case 1: Keyword is contained within a query word or phrase
+            # This handles cases like "tv" in "smart tv" or "m3" in "m3 chip"
+            found_match = False
+            # Check for keyword within individual words
             for query_word in query_words:
-                if keyword.lower() in query_word and keyword.lower() != query_word:
-                    for ad_id in self.keyword_index[keyword]:
-                        if ad_id not in matches:
-                            matches[ad_id] = []
-                        if keyword not in matches[ad_id]:  # Avoid duplicates
-                            matches[ad_id].append(keyword)
+                if (keyword.lower() in query_word and 
+                    keyword.lower() != query_word):
+                    found_match = True
+                    break
+            
+            # Check for keyword within the entire query even if not a whole word
+            # This helps with things like partial brand names or product identifiers
+            if not found_match and keyword.lower() in query.lower():
+                found_match = True
+                
+            if found_match:
+                for ad_id in self.keyword_index[keyword]:
+                    if ad_id not in matches:
+                        matches[ad_id] = []
+                    if keyword not in matches[ad_id]:  # Avoid duplicates
+                        matches[ad_id].append(keyword)
+            
+            # Case 2: Query word is contained within a keyword
+            # This handles cases like query "apple" matching keyword "apple products"
+            elif ' ' in keyword.lower():
+                keyword_parts = keyword.lower().split()
+                for query_word in query_words:
+                    if query_word in keyword_parts:
+                        for ad_id in self.keyword_index[keyword]:
+                            if ad_id not in matches:
+                                matches[ad_id] = []
+                            if keyword not in matches[ad_id]:  # Avoid duplicates
+                                matches[ad_id].append(keyword)
+                                break
         
         self.logger.debug(f"Keyword matches found: {matches}")
         return matches
